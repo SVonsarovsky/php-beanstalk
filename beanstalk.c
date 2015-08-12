@@ -583,10 +583,18 @@ void put_callback(bsc *svr, struct bsc_put_info *info)
     put_flag = true;
 }
 
-bool cmd_put(bsc *svr, char *value, int value_len)
+bool cmd_put(bsc *svr, char *value, int value_len, long priority, long delay, long ttr)
 {
-    bsc_error = bsc_put(svr, put_callback, NULL, BSC_DEFAULT_PRORITY, 
-					BSC_DEFAULT_DELAY, BSC_DEFAULT_TTR, value_len, value, false);
+	if (priority < 0) {
+		priority = BSC_DEFAULT_PRIORITY;
+	}
+	if (delay < 0) {
+		delay = BSC_DEFAULT_DELAY;
+	}
+	if (ttr < 0) {
+		ttr = BSC_DEFAULT_TTR;
+	}
+	bsc_error = bsc_put(svr, put_callback, NULL, priority, delay, ttr, value_len, value, false);
 
     if (bsc_error != BSC_ERROR_NONE) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "critical error: got unknown error (%d)\n", bsc_error);
@@ -612,16 +620,18 @@ PHP_FUNCTION(beanstalk_put)
 	bsc * svr;
 	char *tube, *value;
 	int tube_len, value_len;
+	long priority = -1, delay = -1, ttr = -1;
     zval *bsc_object = getThis();
     long flags = 0, exptime = 0;
+	long response_id;
 
     if (bsc_object == NULL) {
-        if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Oss|ll", &bsc_object, beanstalk_pool_ce, &tube, &tube_len, &value, &value_len, &flags, &exptime) == FAILURE) {
+        if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Oss|lllll", &bsc_object, beanstalk_pool_ce, &tube, &tube_len, &value, &value_len, &priority, &delay, &ttr, &flags, &exptime) == FAILURE) {
             return;
         }
     }
     else {
-        if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|ll", &tube, &tube_len, &value, &value_len, &flags, &exptime) == FAILURE) {
+        if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|lllll", &tube, &tube_len, &value, &value_len, &priority, &delay, &ttr, &flags, &exptime) == FAILURE) {
             return;
         }
     }
@@ -637,11 +647,12 @@ PHP_FUNCTION(beanstalk_put)
 		RETURN_FALSE;
 	}
 
-	if(cmd_put(svr, value, value_len) && g_put_info) {
+	if(cmd_put(svr, value, value_len, priority, delay, ttr) && g_put_info) {
 		if(BSC_PUT_RES_INSERTED == g_put_info->response.code) {
+			response_id = (long)g_put_info->response.id;
 			g_put_info = NULL;
 			put_flag = false;
-			RETURN_TRUE;
+			RETURN_LONG(response_id);
 		}
 	}
 
@@ -882,7 +893,7 @@ void bury_callback(bsc *svr, struct bsc_bury_info *info)
 
 bool cmd_bury(bsc *svr, int job_id)
 {
-    bsc_error = bsc_bury(svr, bury_callback, NULL, job_id, BSC_DEFAULT_PRORITY);
+    bsc_error = bsc_bury(svr, bury_callback, NULL, job_id, BSC_DEFAULT_PRIORITY);
 
     if (bsc_error != BSC_ERROR_NONE) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "critical error: got unknown error (%d)\n", bsc_error);

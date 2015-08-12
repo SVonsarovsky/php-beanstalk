@@ -65,7 +65,7 @@ PHP_FUNCTION(beanstalk_quit);
 #define BSC_DEFAULT_TIMEOUT 0               /* seconds */
 #define BSC_DEFAULT_RETRY 15                /* retry failed server after x seconds */
 
-#define BSC_DEFAULT_PRORITY	1024
+#define BSC_DEFAULT_PRIORITY	1024
 #define BSC_DEFAULT_DELAY	0
 #define BSC_DEFAULT_TTR		60
 #define DEFAULT_PORT		60
